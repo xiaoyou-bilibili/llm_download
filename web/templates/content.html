@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>个人知识库</title>
+    <!-- 两个任选一个 github pages -->
+    <link type="text/css" href="https://cdn.jsdelivr.net/gh/MorFansLab/LiteWebChat_Frame/dist/css/litewebchat.min.css" rel="stylesheet"/>
+    <link type="text/css" href="https://cdn.jsdelivr.net/gh/MorFansLab/LiteWebChat_Frame/dist/css/litewebchat_input.min.css" rel="stylesheet"/>
+    <!-- 引入 layui.css -->
+    <link rel="stylesheet" href="//unpkg.com/layui@2.6.8/dist/css/layui.css">
+    <style>
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        /* 手动指定其父容器大小 */
+        .lite-chatmaster {
+          height: 100%;
+          width: 100%;
+        }
+        .layui-tab-item {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="layui-tab-item layui-show">
+    <!-- 父容器 -->
+    <div class="lite-chatmaster">
+        <!-- 聊天栏 -->
+        <div class="lite-chatbox"></div>
+        <!-- 输入框 -->
+        <div class="lite-chatinput">
+            <!-- 分界线 -->
+            <hr class="boundary" />
+            <!-- 文字输入框 -->
+            <button class="send" id="send_message">发送</button>
+            <button class="send" id="clear_context">清空</button>
+            <div aria-label="input area" id="chatinput" class="editor chatinput" contenteditable="true" ref="editor"></div>
+        </div>
+    </div>
+  </div>
+
+<!-- 引入 layui.js -->
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="//unpkg.com/layui@2.6.8/dist/layui.js">
+<script src="https://cdn.jsdelivr.net/gh/MorFansLab/LiteWebChat_Frame/dist/js/litewebchat_input.min.js"></script>
+<!-- 渲染 -->
+<script src="https://cdn.jsdelivr.net/gh/MorFansLab/LiteWebChat_Frame/dist/js/litewebchat_render.min.js"></script>
+<!-- 抽离的聊天信息组件 -->
+<!--<script src="https://cdn.jsdelivr.net/gh/MorFansLab/LiteWebChat_Frame/lite-chatbox.min.js"></script>-->
+<script>
+  const htmls = [{messageType: "text", headIcon: "/static/avatar.jpg", name: "小游", position: "left", html: "输入搜索引擎的关键词即可帮你查找资源！"}];
+  function addMessage(message) {
+      htmls.push(message)
+      beforeRenderingHTML(htmls, ".lite-chatbox");
+  }
+  function sendPostRequest(url, data, success) {
+      $.ajax({ type: "POST", url: url,
+        data: JSON.stringify(data), // 将 JSON 数据转换为字符串
+        contentType: "application/json", // 指定请求的内容类型为 JSON
+        dataType: "json", // 指定响应的内容类型为 JSON
+        success: success
+      });
+  }
+  beforeRenderingHTML(htmls, ".lite-chatbox");
+</script>
+<script type="text/html" id="content-bar">
+  <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+<script>
+    // 发送消息
+    $("#send_message").on('click', function() {
+        let input = $("#chatinput")
+        question = input.text()
+        sendPostRequest("/chat/ask", {question}, function(response) {
+            let html = ""
+            if(response.length === 0) {
+                html = "很抱歉，我无法找到相关的资源链接。请尝试使用其他关键词或者提供更多的信息，我将尽力帮助您找到所需的资源。"
+            } else {
+                let content = []
+                let ref = []
+                response.forEach((item) => {
+                    ref.push(`<a href="${item.ref}" target="_blank">${item.title}</a>`)
+                    content = content.concat(item.links.map(link => `<span>${link.desc}<span>:<a href="${link.url}" target="_blank">${link.url}</a>`))
+                })
+                html = `${content.join("<br>")}<hr>${ref.join("<br>")}`
+            }
+            addMessage({messageType: "raw", headIcon: "/static/avatar.jpg", name: "小游", position: "left", html: html})
+        })
+        addMessage({messageType: "text", headIcon: "/static/momo.jpg", name: "用户", position: "right", html: question});
+        input.text("")
+    })
+    // 清除上下文
+    $("#clear_context").on('click', function() {
+         $(".lite-chatbox").empty()
+        addMessage({messageType: "text", headIcon: "/static/avatar.jpg", name: "小游", position: "left", html: "已清空，请继续提问吧！"})
+    })
+</script>
+</body>
+</html>
